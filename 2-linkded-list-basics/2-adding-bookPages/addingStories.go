@@ -16,25 +16,32 @@ func (bp *bookPage) readContent() {
 	}
 }
 
-func (bp *bookPage) addNewPage(text string) {
+func (bp *bookPage) addNewPageToEnd(text string) {
 	newPage := &bookPage{text, nil}
-	for bp.nextPage != nil {
-		bp = bp.nextPage
+	for bp.nextPage != nil { // the next page will only be nil if the current page is the last page
+		bp = bp.nextPage // asssign the bookpage to the last page
 	}
 
-	bp.nextPage = newPage
+	bp.nextPage = newPage // add a new page
+
+	//or
 	//bp.nextPage = &bookPage{text, nil}
 }
 
+func (bp *bookPage) addNewPageAfter(text string) {
+	newpage := &bookPage{text, bp.nextPage}
+	bp.nextPage = newpage
+}
+
 func main() {
-	pg1 := bookPage{"First page", nil}
-	pg2 := bookPage{"Second page", nil}
-	pg3 := bookPage{"Third page", nil}
+	pg := bookPage{"First page", nil}
+	pg.addNewPageToEnd("Second page")
+	pg.addNewPageToEnd("Third page")
+	pg.addNewPageToEnd("Fourth page")
+	pg.readContent()
 
-	pg1.nextPage = &pg2 //page 1 is a linked list containing pages 2 & 3
-	pg2.nextPage = &pg3 //page 2 is a linked list containing page 3
+	fmt.Println("------------")
 
-	pg1.readContent() // reads contents from pages 1 through 3
-	// pg2.readContent() // reads contents from pages 2 through 3
-	// pg3.readContent() // reads content from page 3
+	pg.addNewPageAfter("Before second page")
+	pg.readContent()
 }
