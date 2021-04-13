@@ -44,12 +44,16 @@ func (pad *paddle) draw(pixels []byte) {
 
 func (pad *paddle) update(keystate []uint8) {
 	if keystate[sdl.SCANCODE_UP] != 0 {
-		pad.y--
+		pad.y -= 3
 	}
 
 	if keystate[sdl.SCANCODE_DOWN] != 0 {
-		pad.y++
+		pad.y += 3
 	}
+}
+
+func (pad *paddle) aiUpdate(ball *ball) {
+	pad.y = ball.y
 }
 
 type ball struct {
@@ -70,14 +74,31 @@ func (ball *ball) draw(pixels []byte) {
 	}
 }
 
-func (ball *ball) update() {
+func (ball *ball) update(leftPad, rightPad *paddle) {
 	//make ball move
 	ball.x += ball.xv
 	ball.y += ball.yv
 
-	//handles collision
-	if int(ball.y) < 0 || int(ball.y) > windowHeight{ // top of window or bottom of window
+	//handles collision with window sides
+	if int(ball.y)-ball.radius < 0 || int(ball.y)+ball.radius > windowHeight { // top of window and bottom of window
 		ball.yv = -ball.yv
+	}
+
+	if int(ball.x) < 0 || int(ball.x) > windowWidth { // left side of window and right side of window
+		ball.x, ball.y = 400, 300
+	}
+
+	//handle collision with paddles
+	if int(ball.x)-ball.radius < int(leftPad.x)+leftPad.w/2 {
+		if int(ball.y) < int(leftPad.y)+leftPad.h/2 && int(ball.y) > int(leftPad.y)-leftPad.h/2 {
+			ball.xv = -ball.xv
+		}
+	}
+
+	if int(ball.x)+ball.radius > int(rightPad.x)-rightPad.w/2 {
+		if int(ball.y) < int(rightPad.y)+rightPad.h/2 && int(ball.y) > int(rightPad.y)-rightPad.h/2 {
+			ball.xv = -ball.xv
+		}
 	}
 }
 
@@ -99,7 +120,7 @@ func clearPixels(pixels []byte) {
 }
 
 func main() {
-	window, err := sdl.CreateWindow("demo window", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, int32(windowHeight), int32(windowHeight), sdl.WINDOW_RESIZABLE)
+	window, err := sdl.CreateWindow("Pong", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, int32(windowHeight), int32(windowHeight), sdl.WINDOW_RESIZABLE)
 	Check(err, "Window")
 	defer window.Destroy()
 
@@ -114,7 +135,8 @@ func main() {
 	pixels := make([]byte, windowHeight*windowWidth*4) //create pixel
 
 	player1 := paddle{pos{70, 300}, 30, 100, color{0, 0, 255}} //create player
-	ball := ball{pos{400, 300}, 15, 2, 2, color{0, 0, 255}}    //create ball
+	player2 := paddle{pos{730, 300}, 30, 100, color{0, 0, 255}}
+	ball := ball{pos{400, 300}, 15, 1, 1, color{0, 0, 255}} //create ball
 
 	keystate := sdl.GetKeyboardState()
 
@@ -129,14 +151,15 @@ func main() {
 		// clearpixels so drawing won't be continuous
 		clearPixels(pixels)
 
-		//draw 
+		//draw
 		player1.draw(pixels)
-		ball.draw(pixels)	
+		player2.draw(pixels)
+		ball.draw(pixels)
 
-		// update 
+		// update
 		player1.update(keystate)
-		//ball.update()
-		
+		player2.aiUpdate(&ball)
+		ball.update(&player1, &player2)
 
 		texture.Update(nil, pixels, windowWidth*4)
 		renderer.Copy(texture, nil, nil)
