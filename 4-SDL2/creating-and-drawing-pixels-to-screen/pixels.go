@@ -53,7 +53,7 @@ func main() {
 	//populate pixel
 	for y := 0; y < windowHeight; y++ {
 		for x := 0; x < windowWidth; x++ {
-			populatePixels(y, x, color{255, 0, 0}, pixels) // color{255,0,0} means red only
+			populatePixels(y, x, color{255, 0, 0}, pixels) // color{255,0,0} means red
 		}
 	}
 
