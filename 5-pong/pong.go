@@ -42,7 +42,7 @@ func (pad *paddle) draw(pixels []byte) {
 	}
 }
 
-func (pad *paddle) update(keystate []uint8) {
+func (pad *paddle) update(keystate []byte) {
 	if keystate[sdl.SCANCODE_UP] != 0 {
 		pad.y -= 3
 	}
@@ -134,9 +134,9 @@ func main() {
 
 	pixels := make([]byte, windowHeight*windowWidth*4) //create pixel
 
-	player1 := paddle{pos{70, 300}, 30, 100, color{0, 0, 255}} //create player1
+	player1 := paddle{pos{70, 300}, 30, 100, color{0, 0, 255}}  //create player1
 	player2 := paddle{pos{730, 300}, 30, 100, color{0, 0, 255}} //create player2
-	ball := ball{pos{400, 300}, 15, 1, 1, color{0, 0, 255}} //create ball
+	ball := ball{pos{400, 300}, 15, 1, 1, color{0, 0, 255}}     //create ball
 
 	keystate := sdl.GetKeyboardState()
 
