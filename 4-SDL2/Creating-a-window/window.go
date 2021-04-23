@@ -10,8 +10,8 @@ func main() {
 	window, err := sdl.CreateWindow("demo window", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, 500, 500, sdl.WINDOW_SHOWN)
 	if err != nil {
 		log.Fatal(err)
-	}	
+	}
 	defer window.Destroy() // destroy window when function exits
 
-	sdl.Delay(4000)	// delay function for 4 seconds vefore closing
+	sdl.Delay(4000) // delay function for 4 seconds vefore closing
 }

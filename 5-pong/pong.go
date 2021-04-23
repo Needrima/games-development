@@ -8,7 +8,7 @@ import (
 
 const windowWidth, windowHeight = 800, 600
 
-var scores = [][]byte{
+var scores = [][]byte{ // dimension 3 by 5
 	{
 		1, 1, 1, // zero
 		1, 0, 1,
@@ -17,7 +17,7 @@ var scores = [][]byte{
 		1, 1, 1,
 	},
 	{
-		1, 1, 0,// one
+		1, 1, 0, // one
 		0, 1, 0,
 		0, 1, 0,
 		0, 1, 0,
@@ -36,42 +36,49 @@ var scores = [][]byte{
 		1, 1, 1,
 		0, 0, 1,
 		1, 1, 1,
-	}
+	},
 	{
-		1, 1, 1,
-		1, 0, 1,
-		1, 0, 1,
+		1, 0, 0, //four
 		1, 0, 1,
 		1, 1, 1,
-	}
+		0, 0, 1,
+		0, 0, 1,
+	},
 	{
+		1, 1, 1, // five
+		1, 0, 0,
 		1, 1, 1,
-		1, 0, 1,
-		1, 0, 1,
-		1, 0, 1,
+		0, 0, 1,
 		1, 1, 1,
-	}
+	},
 	{
+		1, 1, 1, // six
+		1, 0, 0,
 		1, 1, 1,
 		1, 0, 1,
-		1, 0, 1,
-		1, 0, 1,
 		1, 1, 1,
-	}
+	},
 	{
-		1, 1, 1,
-		1, 0, 1,
-		1, 0, 1,
-		1, 0, 1,
-		1, 1, 1,
-	}
+		1, 1, 1, // seven
+		0, 0, 1,
+		0, 0, 1,
+		0, 0, 1,
+		0, 0, 1,
+	},
 	{
-		1, 1, 1,
-		1, 0, 1,
-		1, 0, 1,
+		1, 1, 1, //eight
 		1, 0, 1,
 		1, 1, 1,
-	}
+		1, 0, 1,
+		1, 1, 1,
+	},
+	{
+		1, 1, 1, //nine
+		1, 0, 1,
+		1, 1, 1,
+		0, 0, 1,
+		0, 0, 1,
+	},
 }
 
 func Check(err error, msg string) {
@@ -87,6 +94,31 @@ type color struct {
 
 type pos struct {
 	x, y float32 // position with co-ordinates(x, y)
+}
+
+func getScreenCentre() pos {
+	return pos{windowWidth / 2, windowHeight / 2}
+}
+
+func drawScore(p pos, c color, size, score int, pixels []byte) {
+	startX := int(p.x) - (size*3)/2
+	startY := int(p.y) - (size*5)/2
+
+	for i, v := range scores[score] {
+		if v == 1 {
+			for y := startY; y < startY+size; y++ {
+				for x := startX; x < startX+size; x++ {
+					populatePixels(x, y, c, pixels)
+				}
+			}
+		}
+
+		startX += size
+		if (i+1)%3 == 0 {
+			startY += size
+			startX -= size * 3
+		}
+	}
 }
 
 type paddle struct {
@@ -153,7 +185,7 @@ func (ball *ball) update(leftPad, rightPad *paddle, elapsedTime float32) {
 	}
 
 	if int(ball.x) < 0 || int(ball.x) > windowWidth { // left side of window and right side of window
-		ball.x, ball.y = 400, 300 // centre of screen
+		ball.pos = getScreenCentre() // centre of screen
 	}
 
 	//handle collision with paddles
@@ -222,7 +254,7 @@ func main() {
 		}
 		// clearpixels so drawing won't be continuous
 		clearPixels(pixels)
-
+		drawScore(getScreenCentre(), color{255, 255, 255}, 20, 3, pixels)
 		//draw
 		player1.draw(pixels)
 		player2.draw(pixels)
@@ -238,7 +270,7 @@ func main() {
 		renderer.Present()
 
 		elapsedTime = float32(time.Since(framestart).Seconds())
-		if elapsedTime < 0.005 {
+		if elapsedTime < .005 {
 			sdl.Delay(5 - uint32(elapsedTime/1000.0))
 			elapsedTime = float32(time.Since(framestart).Seconds())
 		}
