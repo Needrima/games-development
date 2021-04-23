@@ -3,10 +3,23 @@ package main
 import (
 	"github.com/veandco/go-sdl2/sdl"
 	"log"
+	"math"
 	"time"
 )
 
 const windowWidth, windowHeight = 800, 600
+
+type gameState int
+
+const (
+	start gameState = iota // 0
+	play                   // 1
+	pause                  // 2
+	//game_over_left_paddle
+	//game_over_right_paddle
+)
+
+var state gameState // 0 i.e start
 
 var scores = [][]byte{ // dimension 3 by 5
 	{
@@ -121,11 +134,17 @@ func drawScore(p pos, c color, size, score int, pixels []byte) {
 	}
 }
 
+//linear interpolation to set scores x-position
+func linearInterpolation(leftLimit, rightLimit, percentage float32) float32 {
+	return leftLimit + percentage*(rightLimit-leftLimit)
+}
+
 type paddle struct {
 	pos           //postion
 	w     float32 //width
 	h     float32 //height
 	speed float32
+	score int
 	c     color //color
 }
 
@@ -140,15 +159,23 @@ func (pad *paddle) draw(pixels []byte) {
 			populatePixels(startX+x, startY+y, pad.c, pixels)
 		}
 	}
+
+	scoreX := linearInterpolation(pad.x, getScreenCentre().x, 0.2)
+	drawScore(pos{scoreX, 50}, pad.c, 10, pad.score, pixels)
 }
 
-func (pad *paddle) update(keystate []byte, elapsedTime float32) {
+func (pad *paddle) update(keystate []byte, elapsedTime float32, controllerAxis int16) {
 	if keystate[sdl.SCANCODE_UP] != 0 {
 		pad.y -= pad.speed * elapsedTime
 	}
 
 	if keystate[sdl.SCANCODE_DOWN] != 0 {
 		pad.y += pad.speed * elapsedTime
+	}
+
+	if math.Abs(float64(controllerAxis)) > 1500 {
+		pct := float32(controllerAxis) / 32767.0
+		pad.y += pad.speed * pct * elapsedTime
 	}
 }
 
@@ -184,20 +211,28 @@ func (ball *ball) update(leftPad, rightPad *paddle, elapsedTime float32) {
 		ball.yv = -ball.yv
 	}
 
-	if int(ball.x) < 0 || int(ball.x) > windowWidth { // left side of window and right side of window
+	if int(ball.x) < 0 { // left side of window and right side of window
+		rightPad.score++
 		ball.pos = getScreenCentre() // centre of screen
+		state = start                // gwit for spacebar to be pressed
+	} else if int(ball.x) > windowWidth {
+		leftPad.score++
+		ball.pos = getScreenCentre() // centre of screen
+		state = start
 	}
 
 	//handle collision with paddles
 	if ball.x-ball.radius < leftPad.x+leftPad.w/2 {
 		if ball.y < leftPad.y+leftPad.h/2 && ball.y > leftPad.y-leftPad.h/2 {
 			ball.xv = -ball.xv
+			ball.x = leftPad.x + leftPad.w/2.0 + ball.radius // handle collision detection
 		}
 	}
 
 	if ball.x+ball.radius > rightPad.x-rightPad.w/2 {
 		if ball.y < rightPad.y+rightPad.h/2 && ball.y > rightPad.y-rightPad.h/2 {
 			ball.xv = -ball.xv
+			ball.x = rightPad.x - rightPad.w/2.0 - ball.radius // handle collision detection
 		}
 	}
 }
@@ -232,17 +267,26 @@ func main() {
 	Check(err, "Renderer")
 	defer texture.Destroy()
 
+	var controllers []*sdl.GameController
+	for i := 0; i < sdl.NumJoysticks(); i++ {
+		controllers = append(controllers, sdl.GameControllerOpen(i))
+		defer controllers[i].Close()
+	}
+
 	pixels := make([]byte, windowHeight*windowWidth*4) //create pixel
 
 	//paddles and ball speeds are large numbers because elapsed times are very small
-	player1 := paddle{pos{70, 300}, 30, 100, 200, color{255, 255, 255}}  //create player1
-	player2 := paddle{pos{730, 300}, 30, 100, 200, color{255, 255, 255}} //create player2
-	ball := ball{pos{400, 300}, 15, 300, 300, color{0, 0, 255}}          //create ball
+	player1 := paddle{pos{70, 300}, 30, 100, 200, 0, color{255, 255, 255}}  //create player1
+	player2 := paddle{pos{730, 300}, 30, 100, 200, 0, color{255, 255, 255}} //create player2
+	ball := ball{pos{400, 300}, 15, 300, 300, color{0, 0, 255}}             //create ball
 
 	keystate := sdl.GetKeyboardState()
 
 	var framestart time.Time // go adjust frame rate across all computers
-	var elapsedTime float32
+	var elapsedTime float32  // get elapsed time
+
+	var controllerAxis int16
+
 	for {
 		framestart = time.Now()
 		//checks if window is closed
@@ -252,18 +296,40 @@ func main() {
 				return
 			}
 		}
+
+		for _, controller := range controllers {
+			if controller != nil {
+				controllerAxis = controller.Axis(sdl.CONTROLLER_AXIS_LEFTY)
+			}
+		}
+
+		if state == play { // update and play game
+			if keystate[sdl.SCANCODE_M] != 0 { // if M is pressed, pause game
+				state = pause
+			}
+			player1.update(keystate, elapsedTime, controllerAxis)
+			player2.aiUpdate(&ball, elapsedTime)
+			ball.update(&player1, &player2, elapsedTime)
+		} else if state == start {
+			if keystate[sdl.SCANCODE_SPACE] != 0 { // wait for spacebar to be pressed before playing
+				if player1.score == 9 || player2.score == 9 { // reset score if a player won
+					player1.score = 0
+					player2.score = 0
+				}
+				state = play
+			}
+		} else if state == pause {
+			if keystate[sdl.SCANCODE_N] != 0 { // if N is pressed, play game
+				state = play
+			}
+		}
 		// clearpixels so drawing won't be continuous
 		clearPixels(pixels)
-		drawScore(getScreenCentre(), color{255, 255, 255}, 20, 3, pixels)
+
 		//draw
 		player1.draw(pixels)
 		player2.draw(pixels)
 		ball.draw(pixels)
-
-		// update
-		player1.update(keystate, elapsedTime)
-		player2.aiUpdate(&ball, elapsedTime)
-		ball.update(&player1, &player2, elapsedTime)
 
 		texture.Update(nil, pixels, windowWidth*4)
 		renderer.Copy(texture, nil, nil)
