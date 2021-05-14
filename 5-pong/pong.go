@@ -109,10 +109,24 @@ type pos struct {
 	x, y float32 // position with co-ordinates(x, y)
 }
 
+//centre position of screen
 func getScreenCentre() pos {
 	return pos{windowWidth / 2, windowHeight / 2}
 }
 
+//to draw pixels
+func populatePixels(posX, posY int, c color, pixels []byte) {
+	pixelIndex := (posY*windowWidth + posX) * 4
+
+	if pixelIndex >= 0 && pixelIndex < len(pixels)-4 {
+		pixels[pixelIndex] = c.red
+		pixels[pixelIndex+1] = c.green
+		pixels[pixelIndex+2] = c.blue
+		//pixels[pixelIndex+3] = c.alpha
+	}
+}
+
+//draw score
 func drawScore(p pos, c color, size, score int, pixels []byte) {
 	startX := int(p.x) - (size*3)/2
 	startY := int(p.y) - (size*5)/2
@@ -165,6 +179,7 @@ func (pad *paddle) draw(pixels []byte) {
 }
 
 func (pad *paddle) update(keystate []byte, elapsedTime float32, controllerAxis int16) {
+	//using keyboard to control paddles
 	if keystate[sdl.SCANCODE_UP] != 0 {
 		pad.y -= pad.speed * elapsedTime
 	}
@@ -173,6 +188,7 @@ func (pad *paddle) update(keystate []byte, elapsedTime float32, controllerAxis i
 		pad.y += pad.speed * elapsedTime
 	}
 
+	//using joystick to control paddles
 	if math.Abs(float64(controllerAxis)) > 1500 {
 		pct := float32(controllerAxis) / 32767.0
 		pad.y += pad.speed * pct * elapsedTime
@@ -214,7 +230,7 @@ func (ball *ball) update(leftPad, rightPad *paddle, elapsedTime float32) {
 	if int(ball.x) < 0 { // left side of window and right side of window
 		rightPad.score++
 		ball.pos = getScreenCentre() // centre of screen
-		state = start                // gwit for spacebar to be pressed
+		state = start                // wait for spacebar to be pressed
 	} else if int(ball.x) > windowWidth {
 		leftPad.score++
 		ball.pos = getScreenCentre() // centre of screen
@@ -225,26 +241,15 @@ func (ball *ball) update(leftPad, rightPad *paddle, elapsedTime float32) {
 	if ball.x-ball.radius < leftPad.x+leftPad.w/2 {
 		if ball.y < leftPad.y+leftPad.h/2 && ball.y > leftPad.y-leftPad.h/2 {
 			ball.xv = -ball.xv
-			ball.x = leftPad.x + leftPad.w/2.0 + ball.radius // handle collision detection
+			ball.x = leftPad.x + leftPad.w/2.0 + ball.radius //collision detection with left paddle
 		}
 	}
 
 	if ball.x+ball.radius > rightPad.x-rightPad.w/2 {
 		if ball.y < rightPad.y+rightPad.h/2 && ball.y > rightPad.y-rightPad.h/2 {
 			ball.xv = -ball.xv
-			ball.x = rightPad.x - rightPad.w/2.0 - ball.radius // handle collision detection
+			ball.x = rightPad.x - rightPad.w/2.0 - ball.radius // collision detection with right paddle
 		}
-	}
-}
-
-func populatePixels(posX, posY int, c color, pixels []byte) {
-	pixelIndex := (posY*windowWidth + posX) * 4
-
-	if pixelIndex >= 0 && pixelIndex < len(pixels)-4 {
-		pixels[pixelIndex] = c.red
-		pixels[pixelIndex+1] = c.green
-		pixels[pixelIndex+2] = c.blue
-		//pixels[pixelIndex+3] = c.alpha
 	}
 }
 
