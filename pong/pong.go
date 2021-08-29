@@ -1,10 +1,12 @@
 package main
 
 import (
-	"github.com/veandco/go-sdl2/sdl"
+	"fmt"
 	"log"
-	"math"
+	"strings"
 	"time"
+
+	"github.com/veandco/go-sdl2/sdl"
 )
 
 const windowWidth, windowHeight = 800, 600
@@ -19,7 +21,7 @@ const (
 	//game_over_right_paddle
 )
 
-var state gameState // 0 i.e start
+var state = start // 0 
 
 var scores = [][]byte{ // dimension 3 by 5
 	{
@@ -92,6 +94,48 @@ var scores = [][]byte{ // dimension 3 by 5
 		0, 0, 1,
 		0, 0, 1,
 	},
+	{
+		1, 1, 0, 0, 1, 1, 1, //10
+		0, 1, 0, 0, 1, 0, 1,
+		0, 1, 0, 0, 1, 0, 1,
+		0, 1, 0, 0, 1, 0, 1,
+		1, 1, 1, 0, 1, 1, 1,
+	},
+	{
+		1, 1, 0, 0, 1, 1, 0, //11
+		0, 1, 0, 0, 0, 1, 0,
+		0, 1, 0, 0, 0, 1, 0,
+		0, 1, 0, 0, 0, 1, 0,
+		1, 1, 1, 0, 1, 1, 1,
+	},
+	{
+		1, 1, 0, 0, 1, 1, 1, //12
+		0, 1, 0, 0, 0, 0, 1,
+		0, 1, 0, 0, 1, 1, 1,
+		0, 1, 0, 0, 1, 0, 0,
+		1, 1, 1, 0, 1, 1, 1,
+	},
+	{
+		1, 1, 0, 0, 1, 1, 1, //13
+		0, 1, 0, 0, 0, 0, 1,
+		0, 1, 0, 0, 1, 1, 1,
+		0, 1, 0, 0, 0, 0, 1,
+		1, 1, 1, 0, 1, 1, 1,
+	},
+	{
+		1, 1, 0, 0, 1, 0, 0, //14
+		0, 1, 0, 0, 1, 0, 1,
+		0, 1, 0, 0, 1, 1, 1,
+		0, 1, 0, 0, 0, 0, 1,
+		1, 1, 1, 0, 0, 0, 1,
+	},
+	{
+		1, 1, 0, 0, 1, 1, 1, //10
+		0, 1, 0, 0, 1, 0, 0,
+		0, 1, 0, 0, 1, 1, 1,
+		0, 1, 0, 0, 0, 0, 1,
+		1, 1, 1, 0, 1, 1, 1,
+	},
 }
 
 func Check(err error, msg string) {
@@ -114,6 +158,11 @@ func getScreenCentre() pos {
 	return pos{windowWidth / 2, windowHeight / 2}
 }
 
+//linear interpolation to set scores x-position
+func linearInterpolation(leftLimit, rightLimit, percentage float32) float32 {
+	return leftLimit + percentage*(rightLimit-leftLimit)
+}
+
 //to draw pixels
 func populatePixels(posX, posY int, c color, pixels []byte) {
 	pixelIndex := (posY*windowWidth + posX) * 4
@@ -128,29 +177,45 @@ func populatePixels(posX, posY int, c color, pixels []byte) {
 
 //draw score
 func drawScore(p pos, c color, size, score int, pixels []byte) {
-	startX := int(p.x) - (size*3)/2
-	startY := int(p.y) - (size*5)/2
+	if score < 10 {
+		startX := int(p.x) - (size*3)/2
+		startY := int(p.y) - (size*5)/2
 
-	for i, v := range scores[score] {
-		if v == 1 {
-			for y := startY; y < startY+size; y++ {
-				for x := startX; x < startX+size; x++ {
-					populatePixels(x, y, c, pixels)
+		for i, v := range scores[score] {
+			if v == 1 {
+				for y := startY; y < startY+size; y++ {
+					for x := startX; x < startX+size; x++ {
+						populatePixels(x, y, c, pixels)
+					}
 				}
 			}
-		}
 
-		startX += size
-		if (i+1)%3 == 0 {
-			startY += size
-			startX -= size * 3
+			startX += size
+			if (i+1)%3 == 0 {
+				startY += size
+				startX -= size * 3
+			}
+		}
+	} else {
+		startX := int(p.x) - (size*7)/2
+		startY := int(p.y) - (size*5)/2
+
+		for i, v := range scores[score] {
+			if v == 1 {
+				for y := startY; y < startY+size; y++ {
+					for x := startX; x < startX+size; x++ {
+						populatePixels(x, y, c, pixels)
+					}
+				}
+			}
+
+			startX += size
+			if (i+1)%7 == 0 {
+				startY += size
+				startX -= size * 7
+			}
 		}
 	}
-}
-
-//linear interpolation to set scores x-position
-func linearInterpolation(leftLimit, rightLimit, percentage float32) float32 {
-	return leftLimit + percentage*(rightLimit-leftLimit)
 }
 
 type paddle struct {
@@ -162,6 +227,7 @@ type paddle struct {
 	c     color //color
 }
 
+// draw paddle
 func (pad *paddle) draw(pixels []byte) {
 	// take starting position to the upper left corner of the paddle
 	startX := int(pad.x - pad.w/2)
@@ -178,7 +244,8 @@ func (pad *paddle) draw(pixels []byte) {
 	drawScore(pos{scoreX, 50}, pad.c, 10, pad.score, pixels)
 }
 
-func (pad *paddle) update(keystate []byte, elapsedTime float32, controllerAxis int16) {
+// paddle 1 movement
+func (pad *paddle) update(keystate []byte, elapsedTime float32) {
 	//using keyboard to control paddles
 	if keystate[sdl.SCANCODE_UP] != 0 {
 		pad.y -= pad.speed * elapsedTime
@@ -187,15 +254,22 @@ func (pad *paddle) update(keystate []byte, elapsedTime float32, controllerAxis i
 	if keystate[sdl.SCANCODE_DOWN] != 0 {
 		pad.y += pad.speed * elapsedTime
 	}
+}
 
-	//using joystick to control paddles
-	if math.Abs(float64(controllerAxis)) > 1500 {
-		pct := float32(controllerAxis) / 32767.0
-		pad.y += pad.speed * pct * elapsedTime
+//paddle 2 movement
+func (pad *paddle) updateP2(keystate []byte, elapsedTime float32) {
+	//using keyboard to control paddles
+	if keystate[sdl.SCANCODE_G] != 0 {
+		pad.y -= pad.speed * elapsedTime
+	}
+
+	if keystate[sdl.SCANCODE_B] != 0 {
+		pad.y += pad.speed * elapsedTime
 	}
 }
 
-func (pad *paddle) aiUpdate(ball *ball, elapsedTime float32) {
+// to play against CPU
+func (pad *paddle) aiUpdate(ball *ball) {
 	pad.y = ball.y
 }
 
@@ -207,6 +281,7 @@ type ball struct {
 	c      color   //color
 }
 
+//draw ball
 func (ball *ball) draw(pixels []byte) {
 	for y := -ball.radius; y < ball.radius; y++ {
 		for x := -ball.radius; x < ball.radius; x++ {
@@ -217,12 +292,13 @@ func (ball *ball) draw(pixels []byte) {
 	}
 }
 
+// ball movement
 func (ball *ball) update(leftPad, rightPad *paddle, elapsedTime float32) {
 	//make ball move
 	ball.x += ball.xv * elapsedTime
 	ball.y += ball.yv * elapsedTime
 
-	//handles collision with window sides
+	//handles collision with window top and bottom
 	if ball.y-ball.radius < 0 || ball.y+ball.radius > float32(windowHeight) { // top of window and bottom of window
 		ball.yv = -ball.yv
 	}
@@ -253,6 +329,7 @@ func (ball *ball) update(leftPad, rightPad *paddle, elapsedTime float32) {
 	}
 }
 
+// to clear pixels before re-drawing
 func clearPixels(pixels []byte) {
 	for i := range pixels {
 		pixels[i] = 0
@@ -260,6 +337,7 @@ func clearPixels(pixels []byte) {
 }
 
 func main() {
+	// create window
 	window, err := sdl.CreateWindow("Pong", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, int32(windowHeight), int32(windowHeight), sdl.WINDOW_RESIZABLE)
 	Check(err, "Window")
 	defer window.Destroy()
@@ -272,25 +350,48 @@ func main() {
 	Check(err, "Renderer")
 	defer texture.Destroy()
 
-	var controllers []*sdl.GameController
-	for i := 0; i < sdl.NumJoysticks(); i++ {
-		controllers = append(controllers, sdl.GameControllerOpen(i))
-		defer controllers[i].Close()
+	//create pixel
+	pixels := make([]byte, windowHeight*windowWidth*4)
+
+	// create paddles and ball
+	p1, p2, b := paddle{}, paddle{}, ball{}
+
+	// set difficulty
+	for {
+		fmt.Println("Choose difficulty")
+
+		fmt.Println("E: easy\nM: medium\nH: hard")
+
+		var difficulty string
+		fmt.Scan(&difficulty)
+
+		difficulty = strings.ToLower(difficulty)
+
+		if difficulty == "e" {
+			p1 = paddle{pos{70, 300}, 30, 100, 200, 0, color{255, 255, 255}}  //create p1
+			p2 = paddle{pos{730, 300}, 30, 100, 200, 0, color{255, 255, 255}} //create p2
+			b = ball{pos{400, 300}, 15, 300, 300, color{0, 0, 255}}
+			break
+		} else if difficulty == "m" {
+			p1 = paddle{pos{70, 300}, 30, 100, 500, 0, color{255, 255, 255}}  //create p1
+			p2 = paddle{pos{730, 300}, 30, 100, 500, 0, color{255, 255, 255}} //create p2
+			b = ball{pos{400, 300}, 15, 500, 500, color{0, 255, 0}}
+			break
+		} else if difficulty == "h" {
+			p1 = paddle{pos{70, 300}, 30, 100, 900, 0, color{255, 255, 255}}  //create p1
+			p2 = paddle{pos{730, 300}, 30, 100, 900, 0, color{255, 255, 255}} //create p2
+			b = ball{pos{400, 300}, 15, 700, 700, color{255, 0, 0}}
+			break
+		} else {
+			fmt.Println("Invalid choice")
+		}
 	}
 
-	pixels := make([]byte, windowHeight*windowWidth*4) //create pixel
-
-	//paddles and ball speeds are large numbers because elapsed times are very small
-	player1 := paddle{pos{70, 300}, 30, 100, 200, 0, color{255, 255, 255}}  //create player1
-	player2 := paddle{pos{730, 300}, 30, 100, 200, 0, color{255, 255, 255}} //create player2
-	ball := ball{pos{400, 300}, 15, 300, 300, color{0, 0, 255}}             //create ball
-
+	//get keystate for keyboard input
 	keystate := sdl.GetKeyboardState()
 
-	var framestart time.Time // go adjust frame rate across all computers
+	var framestart time.Time // adjust frame rate across all computers
 	var elapsedTime float32  // get elapsed time
-
-	var controllerAxis int16
 
 	for {
 		framestart = time.Now()
@@ -302,24 +403,20 @@ func main() {
 			}
 		}
 
-		for _, controller := range controllers {
-			if controller != nil {
-				controllerAxis = controller.Axis(sdl.CONTROLLER_AXIS_LEFTY)
-			}
-		}
-
+		// control gamestates
 		if state == play { // update and play game
 			if keystate[sdl.SCANCODE_M] != 0 { // if M is pressed, pause game
 				state = pause
 			}
-			player1.update(keystate, elapsedTime, controllerAxis)
-			player2.aiUpdate(&ball, elapsedTime)
-			ball.update(&player1, &player2, elapsedTime)
+			p1.update(keystate, elapsedTime)
+			p2.aiUpdate(&b)
+			//p2.updateP2(keystate, elapsedTime)
+			b.update(&p1, &p2, elapsedTime)
 		} else if state == start {
 			if keystate[sdl.SCANCODE_SPACE] != 0 { // wait for spacebar to be pressed before playing
-				if player1.score == 9 || player2.score == 9 { // reset score if a player won
-					player1.score = 0
-					player2.score = 0
+				if p1.score == 15 || p2.score == 15 { // reset score if a player won
+					p1.score = 0
+					p2.score = 0
 				}
 				state = play
 			}
@@ -328,23 +425,23 @@ func main() {
 				state = play
 			}
 		}
+
 		// clearpixels so drawing won't be continuous
 		clearPixels(pixels)
 
 		//draw
-		player1.draw(pixels)
-		player2.draw(pixels)
-		ball.draw(pixels)
+		p1.draw(pixels)
+		p2.draw(pixels)
+		b.draw(pixels)
 
 		texture.Update(nil, pixels, windowWidth*4)
 		renderer.Copy(texture, nil, nil)
 		renderer.Present()
 
+		// update elapsed time to adjust game for all framerates
 		elapsedTime = float32(time.Since(framestart).Seconds())
-		if elapsedTime < .005 {
+		if elapsedTime < 0.005 {
 			sdl.Delay(5 - uint32(elapsedTime/1000.0))
-			elapsedTime = float32(time.Since(framestart).Seconds())
 		}
-
 	}
 }
