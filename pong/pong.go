@@ -21,7 +21,7 @@ const (
 	//game_over_right_paddle
 )
 
-var state = start // 0 
+var state = start // 0
 
 var scores = [][]byte{ // dimension 3 by 5
 	{
