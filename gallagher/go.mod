@@ -1,4 +1,4 @@
-module projects/pong
+module projects/gallagher
 
 go 1.16
 

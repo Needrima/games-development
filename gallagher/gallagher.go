@@ -10,7 +10,7 @@ const (
 	windowWidth, windowHeight = 800, 600
 	playerWidth, playerHeight = 100, 100
 	enemyWidth, enemyHeight   = 70, 70
-	bulletWidth, bulletHeight   = 20, 20
+	bulletWidth, bulletHeight = 40, 40
 )
 
 func Check(err error, msg string) {
@@ -59,20 +59,18 @@ func (p *player) draw(renderer *sdl.Renderer) {
 	renderer.Copy(p.texture, &sdl.Rect{W: playerWidth, H: playerHeight}, &sdl.Rect{X: int32(p.xPos), Y: int32(p.yPos), W: playerWidth, H: playerHeight})
 }
 
-func (p *player) update(keystate []uint8, r *sdl.Renderer) {
-	if p.xPos > 0 && (p.xPos+playerWidth) < windowWidth {
-		if keystate[sdl.SCANCODE_LEFT] != 0 {
+func (p *player) update(keystate []uint8) {
+	if (p.xPos) > 0 && (p.xPos) < windowWidth {
+		if keystate[sdl.SCANCODE_LEFT] != 0 { // moves playe left
 			p.xPos -= p.speed
-		} else if keystate[sdl.SCANCODE_RIGHT] != 0 {
+		} else if keystate[sdl.SCANCODE_RIGHT] != 0 { //moves player right
 			p.xPos += p.speed
+		} else if keystate[sdl.SCANCODE_UP] != 0 { // moves player up
+			p.yPos -= p.speed
 		}
 	} else {
+		fmt.Println("Exceeded x-position")
 		p.xPos, p.yPos = (windowWidth/2)-(playerWidth/2), windowHeight-playerHeight
-	}
-
-	if keystate[sdl.SCANCODE_SPACE] != 0 {
-		b.draw(r)
-		b.update()
 	}
 
 }
@@ -111,7 +109,6 @@ func (e *enemy) draw(renderer *sdl.Renderer) {
 type bullet struct {
 	texture    *sdl.Texture
 	xPos, yPos float64
-	speed float64
 }
 
 func CreateBullet(renderer *sdl.Renderer, x, y float64) bullet {
@@ -120,18 +117,12 @@ func CreateBullet(renderer *sdl.Renderer, x, y float64) bullet {
 
 	b.xPos = x
 	b.yPos = y
-	b.speed = 0.6
 	return b
 }
 
 func (b *bullet) draw(renderer *sdl.Renderer) {
 	renderer.Copy(b.texture, &sdl.Rect{W: bulletWidth, H: bulletHeight}, &sdl.Rect{X: int32(b.xPos), Y: int32(b.yPos), W: bulletWidth, H: bulletHeight})
 }
-
-func (b *bullet) update() {
-	b.yPos += b.speed		
-}
-
 
 func main() {
 	// initialize sdl
@@ -155,7 +146,7 @@ func main() {
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 3; j++ {
 			x := (float64(i) / 8 * windowWidth) + enemyWidth/2
-			y := float64(j) * enemyWidth + enemyHeight/2
+			y := float64(j)*enemyWidth + enemyHeight/2
 
 			en := CreateEnemy(renderer, x, y)
 			defer en.texture.Destroy()
@@ -174,7 +165,7 @@ func main() {
 			}
 		}
 
-		renderer.SetDrawColor(255, 255, 255, 255) /// set default draw color if color not specified
+		renderer.SetDrawColor(0, 0, 0, 0) /// set default draw color if color not specified
 		renderer.Clear()
 
 		player.draw(renderer)
