@@ -1,2 +1,2 @@
-# go-game-dev
+# games-development
 Games development in Golang
