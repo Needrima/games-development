@@ -6,7 +6,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"log"
-	"word-game/game"
+	"galaga/game"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -23,6 +23,7 @@ type Game struct {
 
 func (g *Game) Update() error {
 
+	// player movement
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		if g.Player.PosX+imageResizeWidth <= float64(windowWidth) {
 			g.Player.PosX += g.Player.Speed
@@ -48,12 +49,20 @@ func (g *Game) Update() error {
 		}
 	}
 
+	// bullet movement
 	if g.Bullet.PosY < 0 {
 		g.Bullet.PosX = g.Player.PosX + imageResizeWidth/2
 		g.Bullet.PosY = g.Player.PosY
+		g.Bullet.IsShown = false
 	}
 
-	g.Bullet.PosY -= g.Bullet.Speed
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		g.Bullet.IsShown = true
+	}
+
+	if g.Bullet.IsShown {
+		g.Bullet.PosY -= g.Bullet.Speed
+	}
 
 	return nil
 }
@@ -69,7 +78,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// draw player
 	opt = &ebiten.DrawImageOptions{}
 	opt.GeoM.Translate(g.Bullet.PosX, g.Bullet.PosY)
-	screen.DrawImage(g.Bullet.Img, opt)
+	if g.Bullet.IsShown {
+		screen.DrawImage(g.Bullet.Img, opt)
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -95,9 +106,10 @@ func main() {
 	bulletImage.Fill(color.White)
 	bullet := game.Bullet{
 		Img:   bulletImage,
-		Speed: 5,
+		Speed: 10,
 		PosX:  player.PosX + imageResizeWidth/2,
 		PosY:  player.PosY,
+		IsShown: false,
 	}
 
 	g := &Game{}

@@ -1,4 +1,4 @@
-module word-game
+module galaga
 
 go 1.19
 
