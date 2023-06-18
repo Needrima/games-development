@@ -7,4 +7,5 @@ type Player struct {
 	Speed float64
 	PosX  float64
 	PosY  float64
+	Bullet
 }
